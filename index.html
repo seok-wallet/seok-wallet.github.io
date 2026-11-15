@@ -176,7 +176,7 @@ const CONFIG = {
 const DEMO_PIN = '000000';
 // Supabase 연결 전 임시 확인용 (PIN 원문은 코드에 넣지 않음)
 const LOCAL_PIN_HASH = '27719960a895e38f289edca06b89a28492d9d31f342d1676535d0f33e952d908';
-const VERSION = 'v0.1';
+const VERSION = 'v0.1.1';
 
 /* ============ 기본 분류 (* = 용돈 차감 기본 체크) ============ */
 const DEFAULT_SETTINGS = {
@@ -275,7 +275,12 @@ const Store = {
       await this.loadLib();
       if (!this.sb) this.sb = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY, { auth: { persistSession: false } });
       const { data, error } = await this.sb.auth.signInWithPassword({ email: CONFIG.LOGIN_EMAIL, password: pin });
-      if (error) { if (/invalid/i.test(error.message)) return false; throw error; }
+      if (error) {
+        if (error.code === 'invalid_credentials' || /invalid login credentials/i.test(error.message)) return false;
+        if (/email not confirmed/i.test(error.message)) throw new Error('계정 이메일 인증이 안 됐어요 (Supabase Users에서 Auto Confirm 필요)');
+        if (/invalid api key|no api key/i.test(error.message)) throw new Error('Supabase 키가 맞지 않아요');
+        throw error;
+      }
       this.mode = 'supabase'; S.user = data.user; await this.loadAll(); return true;
     }
     if (await sha256(pin) !== LOCAL_PIN_HASH) return false;
