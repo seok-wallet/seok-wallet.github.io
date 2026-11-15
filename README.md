@@ -1,1 +1,0 @@
-# seok-wallet.github.io
